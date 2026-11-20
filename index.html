@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="A local-first osu!mania replay timing analyzer. Inspect early and late hits, timing distributions, and lane bias.">
+  <title>offset. | osu!mania timing analyzer</title>
+  <link rel="stylesheet" href="./src/style.css">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <!-- LZMA-JS v2.3.2, MIT. Only this library is fetched from a CDN; files are never uploaded. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/lzma@2.3.2/src/lzma-d.js"></script>
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <div class="background-orb orb-a" aria-hidden="true"></div>
+  <div class="background-orb orb-b" aria-hidden="true"></div>
+  <header class="nav container">
+    <a href="./" class="brand" aria-label="offset home"><span class="brand-mark"><span></span></span><span>offset<span class="brand-dot">.</span></span></a>
+    <span class="nav-subtitle">/ osu!mania timing lab</span>
+    <div class="nav-right"><span class="status-led"></span> LOCAL ANALYSIS <span class="nav-divider"></span><a href="https://github.com" target="_blank" rel="noopener noreferrer">GITHUB <span aria-hidden="true">&#8599;</span></a></div>
+  </header>
+  <main class="container">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="eyebrow"><span class="eyebrow-rule"></span> REPLAY INSIGHTS, WITHOUT THE GUESSWORK</div>
+      <h1 id="hero-title">Find your <em>rhythm.</em><br>Fix your <span class="accent">timing.</span></h1>
+      <p>See exactly how early or late you hit each note. Drop in an osu!mania replay and its matching beatmap to explore your timing spread, lane by lane.</p>
+      <div class="hero-trust"><span><span class="trust-icon">&#10003;</span> Client-side processing</span><span><span class="trust-icon">&#10003;</span> No account or backend</span><span><span class="trust-icon">&#10003;</span> Export your data</span></div>
+    </section>
+
+    <section class="upload-panel" aria-labelledby="upload-heading">
+      <div class="section-bar"><div><span class="step">01 /</span> <h2 id="upload-heading">Load your files</h2></div><span class="section-hint">Both files are required</span></div>
+      <div class="upload-grid">
+        <label class="dropzone" id="replay-dropzone" for="replay-input" tabindex="0">
+          <input type="file" id="replay-input" accept=".osr" class="sr-only">
+          <span class="drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 4h8l4 4v12H4V4h4Z"/><path d="M15 4v5h5M9 15h6m-3-3v6"/></svg></span>
+          <span class="drop-title">Replay file <span class="file-type">.osr</span></span>
+          <span class="drop-description" id="replay-description">Drag &amp; drop or <u>browse files</u></span>
+          <span class="drop-foot">Holds your keypress data</span>
+        </label>
+        <label class="dropzone" id="beatmap-dropzone" for="beatmap-input" tabindex="0">
+          <input type="file" id="beatmap-input" accept=".osu" class="sr-only">
+          <span class="drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h16v12H4zM8 6v12M12 6v12M16 6v12"/><path d="M4 13h16" opacity=".5"/></svg></span>
+          <span class="drop-title">Beatmap file <span class="file-type">.osu</span></span>
+          <span class="drop-description" id="beatmap-description">Drag &amp; drop or <u>browse files</u></span>
+          <span class="drop-foot">Provides note times &amp; hit windows</span>
+        </label>
+      </div>
+      <div class="upload-actions">
+        <div id="status" class="load-status" role="status" aria-live="polite"><span class="status-icon">i</span> Select both files to begin.</div>
+        <button class="button button-primary" id="analyze-button" disabled>Analyze replay <span aria-hidden="true">&#8594;</span></button>
+      </div>
+    </section>
+
+    <section id="results" class="results hidden" aria-labelledby="results-title">
+      <div class="section-bar results-bar"><div><span class="step">02 /</span> <h2 id="results-title">Your timing report</h2></div><div class="action-group"><button class="button button-ghost" id="csv-button">Export CSV &#8595;</button><button class="button button-ghost" id="svg-button">Export chart &#8595;</button></div></div>
+      <div class="map-header"><div><div class="map-kicker" id="map-kicker">MAP INFORMATION</div><h3 id="map-title"></h3><p id="map-detail"></p></div><div class="map-auth" id="map-auth"></div></div>
+      <div id="notices" aria-live="polite"></div>
+      <div class="summary-grid">
+        <div class="metric"><span class="metric-name">MEAN OFFSET <span class="metric-help">&#9432;</span></span><strong id="stat-mean">--</strong><small id="mean-context">Average error</small></div>
+        <div class="metric"><span class="metric-name">MEDIAN OFFSET</span><strong id="stat-median">--</strong><small>Typical signed error</small></div>
+        <div class="metric"><span class="metric-name">STD. DEVIATION</span><strong id="stat-std">--</strong><small>Timing consistency</small></div>
+        <div class="metric"><span class="metric-name">MATCHED HITS</span><strong id="stat-hits">--</strong><small id="matched-context">Note starts</small></div>
+      </div>
+      <div class="data-panel">
+        <div class="panel-head"><div><span class="panel-eyebrow">DISTRIBUTION</span><h3>Where your hits land</h3><p>Negative = early. Positive = late. Colored bands indicate nominal stable judgement windows.</p></div><div class="panel-controls"><label for="bin-select">BIN SIZE</label><select id="bin-select"><option value="2">2 ms</option><option value="4" selected>4 ms</option><option value="8">8 ms</option><option value="10">10 ms</option></select></div></div>
+        <div class="chart-key"><span><i class="key-dot early"></i> Early</span><span><i class="key-dot late"></i> Late</span><span class="key-note">Zero line = perfect timing</span></div>
+        <div class="svg-wrapper"><svg id="histogram" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <div class="judgement-guide" id="judgement-guide"></div>
+      </div>
+      <div class="filters-panel"><div><span class="panel-eyebrow">FILTER YOUR HITS</span><div id="lane-filters" class="lane-filters" role="group" aria-label="Filter by lane"></div></div><div class="type-switch" role="group" aria-label="Filter by note type"><button class="switch-active" data-type="all">All notes</button><button data-type="tap">Taps</button><button data-type="hold">Holds</button></div></div>
+      <div class="data-panel timeline-panel"><div class="panel-head"><div><span class="panel-eyebrow">CONSISTENCY</span><h3>Timing through the map</h3><p>Each dot is one matched note start. The green line tracks your rolling median.</p></div></div><div class="svg-wrapper"><svg id="timeline" preserveAspectRatio="xMidYMid meet"></svg></div></div>
+      <div class="lower-grid">
+        <div class="data-panel split-panel"><div class="panel-head"><div><span class="panel-eyebrow">DIRECTION</span><h3>Early vs. late</h3></div></div><div class="split-numbers"><div><span>EARLY</span><strong id="early-percent">--</strong><small id="early-count"></small></div><div class="right-align"><span>LATE</span><strong id="late-percent">--</strong><small id="late-count"></small></div></div><div class="direction-bar"><span id="early-bar"></span><span id="exact-bar"></span><span id="late-bar"></span></div><p class="fine-print" id="exact-count"></p></div>
+        <div class="data-panel splits-panel"><div class="panel-head"><div><span class="panel-eyebrow">BREAKDOWN</span><h3>By lane</h3></div></div><div class="table-scroll"><table><thead><tr><th>LANE</th><th>HITS</th><th>MEAN</th><th>STD DEV</th><th>LATE %</th></tr></thead><tbody id="lane-tbody"></tbody></table></div></div>
+      </div>
+      <div class="data-panel judgements-panel"><div class="panel-head"><div><span class="panel-eyebrow">SCORECARD</span><h3>Replay judgements</h3><p>These counts come directly from the replay header and can differ from estimated head timing, especially for holds.</p></div></div><div class="judgements-grid" id="judgements-grid"></div><div class="mini-meta" id="replay-meta"></div></div>
+      <p class="analysis-note">Method: replay key-down transitions are matched in order to beatmap note starts within the stable osu!mania 50 window. Hold releases are not evaluated; misses and timing judgements are estimates, not a full game-side resimulation. Notelock, unusual mods, and replay encoding variants can affect accuracy.</p>
+    </section>
+    <section class="how" aria-label="How it works"><div class="section-bar"><div><span class="step">?</span> <h2>How it works</h2></div></div><div class="how-grid"><div><span class="how-number">01</span><h3>Decode</h3><p>Read the .osr key states and decompress the replay's event stream locally.</p></div><div><span class="how-number">02</span><h3>Align</h3><p>Match key-downs to each lane's note starts from the .osu chart.</p></div><div><span class="how-number">03</span><h3>Explore</h3><p>See offsets and timing trends, filter lanes, and export CSV or SVG.</p></div></div></section>
+  </main>
+  <footer class="footer container"><span><strong>offset.</strong> / An independent osu!mania timing utility</span><span>Nothing you select is uploaded.</span><a href="https://osu.ppy.sh/wiki/en/Gameplay/Judgement/osu%21mania" target="_blank" rel="noopener noreferrer">Judgement formulas &#8599;</a></footer>
+</body>
+</html>
